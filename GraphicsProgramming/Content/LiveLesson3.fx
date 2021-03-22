@@ -87,7 +87,7 @@ VertexShaderOutput MainVS(float4 position : POSITION, float4 color : COLOR0, flo
     output.position = normalize(mul(mul(mul(position, World), View), Projection));
     output.color = color;
     output.uv = uv;
-    output.worldNormal = normalize(mul(normal, World)).xyz;
+    output.worldNormal = mul(normal, (float3x3)World);
 
     return output;
 }
@@ -106,21 +106,21 @@ float4 EarthPS(VertexShaderOutput input) : COLOR
     float3 lightDirection = normalize(input.worldPos - lightPosition);
 
     //calculate specular
-    float3 refl = normalize(reflect(-lightDirection, input.worldNormal));
+    float3 refl = normalize(-reflect(lightDirection, input.worldNormal));
     float spec = pow(max(dot(refl, normalize(viewDirection)), 0.0), 4);
 
     //calculate lighting
     float light = max(dot(input.worldNormal, -lightDirection), 0.0);
 
     float3 skyColor = float3(.529f, 0.808f, 0.992f);
-    float3 fresnel = pow(dot(input.worldNormal, viewDirection) * .5 + .5, 3) * 8 * light * skyColor;
+    float3 fresnel = pow((1 - dot(input.worldNormal, viewDirection)) * .5 + .5, 3) * 2 * light * skyColor;
     
     float3 diffuseColor = lerp(nightColor.rgb, dayColor.rgb, light) + cloudsColor.rgb * light;
 
     float3 reflectedViewDir = reflect(viewDirection, input.worldNormal);
     float3 skyReflection = texCUBE(SkyTextureSampler, reflectedViewDir).rgb;
 
-    return float4((max(light, 0.2f) + spec * 2) * diffuseColor.rgb + fresnel, 1);
+    return float4((max(light, 0.2f) + spec * 2) * diffuseColor.rgb + skyReflection, 1);
 }
 
 float4 MoonPS(VertexShaderOutput input) : COLOR

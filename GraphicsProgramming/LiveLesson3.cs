@@ -10,104 +10,86 @@ using Microsoft.Xna.Framework.Input;
 class LiveLesson3 : Lesson
 {
 	private Effect myEffect;
-	Vector3 lightPosition = Vector3.Right * 2 + Vector3.Up * 2 + Vector3.Backward * 2;
+	Vector3 lightPosition = Vector3.Zero;
 
 	Model sphere, cube;
 	Texture2D day, night, clouds, moon, sun;
 	TextureCube sky;
 
-	float yaw, pitch, zoom = 30f;
-	int prevX, prevY, prevZoom;
-
-	int planet = 1;
-	bool left, right;
-
 	Matrix earthPos, sunPos, moonPos;
+
+	Vector3 cameraPos = Vector3.Backward * 50;
+	Quaternion cameraRotation = Quaternion.Identity;
+	private int mouseX, mouseY;
+	float yaw, pitch;
+
+	public override void Initialize()
+	{
+		mouseX = Mouse.GetState().X;
+		mouseY = Mouse.GetState().Y;
+	}
 
 	public override void Update(GameTime gameTime)
 	{
-		MouseState mState = Mouse.GetState();
+		float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+		float speed = 20;
+
 		KeyboardState keyState = Keyboard.GetState();
+
+		if (keyState.IsKeyDown(Keys.LeftShift))
+		{
+			speed *= 3;
+		}
+
+		if (keyState.IsKeyDown(Keys.W))
+		{
+			cameraPos += delta * speed * Vector3.Transform(Vector3.Forward, cameraRotation);
+		}
+		else if (keyState.IsKeyDown(Keys.S))
+		{
+			cameraPos -= delta * speed * Vector3.Transform(Vector3.Forward, cameraRotation);
+		}
+		if (keyState.IsKeyDown(Keys.A))
+		{
+			cameraPos += delta * speed * Vector3.Transform(Vector3.Left, cameraRotation);
+		}
+		else if (keyState.IsKeyDown(Keys.D))
+		{
+			cameraPos += delta * speed * Vector3.Transform(Vector3.Right, cameraRotation);
+		}
+		if (keyState.IsKeyDown(Keys.Space))
+		{
+			cameraPos += delta * speed * Vector3.Transform(Vector3.Up, Quaternion.Identity);
+		}
+		else if (keyState.IsKeyDown(Keys.LeftControl))
+		{
+			cameraPos += delta * speed * Vector3.Transform(Vector3.Down, Quaternion.Identity);
+		}
+
+		MouseState mState = Mouse.GetState();
+		int deltaX = mState.X - mouseX;
+		int deltaY = mState.Y - mouseY;
+
+		float sensitivity = 0.01f;
 
 		if (mState.LeftButton == ButtonState.Pressed)
 		{
-			//update yaw & pitch
-			yaw -= (mState.X - prevX) * 0.01f;
-			pitch -= (mState.Y - prevY) * 0.01f;
-
-			pitch = MathF.Min(Math.Max(pitch, -MathF.PI / 2.00001f), MathF.PI / 2.00001f);
+			yaw -= deltaX * sensitivity;
+			pitch -= deltaY * sensitivity;
 		}
 
-		zoom -= (mState.ScrollWheelValue - prevZoom) * 0.01f;
+		pitch = Math.Clamp(pitch, -MathF.PI * .5f, MathF.PI * .5f);
 
-		if (keyState.IsKeyDown(Keys.Left) && !left)
-		{
-			left = true;
-			if (planet <= 1)
-			{
-				planet = 3;
-			}
-			else 
-			{
-				planet--;
-			}
-		}
-		else if(keyState.IsKeyUp(Keys.Left))
-		{
-			left = false;
-		}
+		cameraRotation = Quaternion.CreateFromYawPitchRoll(yaw, pitch, 0);
 
-		if (keyState.IsKeyDown(Keys.Right) && !right)
-		{
-			right = true;
-			if (planet >= 3)
-			{
-				planet = 1;
-			}
-			else 
-			{ 
-				planet++;
-			}
-		}
-		else if (keyState.IsKeyUp(Keys.Right))
-		{
-			right = false;
-		}
+		mouseX = mState.X;
+		mouseY = mState.Y;
 
-		if (keyState.IsKeyDown(Keys.NumPad1))
+		if (mState.RightButton == ButtonState.Pressed)
 		{
-			planet = 1;
+			yaw = 0;
+			pitch = 0;
 		}
-		else if (keyState.IsKeyDown(Keys.NumPad2))
-		{
-			planet = 2;
-		}
-		else if (keyState.IsKeyDown(Keys.NumPad3))
-		{
-			planet = 3;
-		}
-
-		if (keyState.GetPressedKeyCount() > 0)
-		{
-			switch (planet)
-			{
-				case 1:
-					zoom = 50;
-					break;
-				case 2:
-					zoom = 10;
-					break;
-				case 3:
-					zoom = 5;
-					break;
-			}
-		}
-
-
-		Console.WriteLine(planet);
-		prevZoom = mState.ScrollWheelValue;
-		prevX = mState.X;
-		prevY = mState.Y;
 	}
 
 	public override void LoadContent(ContentManager Content, GraphicsDeviceManager graphics, SpriteBatch spriteBatch)
@@ -146,41 +128,19 @@ class LiveLesson3 : Lesson
 		GraphicsDevice device = graphics.GraphicsDevice;
 
 		float time = (float)gameTime.TotalGameTime.TotalSeconds;
-		lightPosition = Vector3.Zero; //new Vector3(MathF.Cos(time), 0, MathF.Sin(time)) * 200;
-		
+
 		//World matrix
 		Matrix World = Matrix.CreateWorld(Vector3.Zero, Vector3.Forward, Vector3.Up);
-
-		//Planet locations
-		sunPos = Matrix.CreateScale(0.1f) * Matrix.CreateRotationZ(-time / 100 /* 25*4 */);
-		earthPos = Matrix.CreateRotationZ(time / 4) * Matrix.CreateTranslation(Vector3.Down * 40) * Matrix.CreateScale(0.01f) * Matrix.CreateRotationZ(time / 1460 /* 365*4 */) * Matrix.CreateRotationY(MathF.PI / 180 * .23f);
-		moonPos = Matrix.CreateScale(0.33f) * Matrix.CreateTranslation(Vector3.Down * 10) * Matrix.CreateRotationZ(time / 4 - time * .03333333f) * Matrix.CreateTranslation(Vector3.Down * 40) * Matrix.CreateScale(0.01f) * Matrix.CreateRotationZ(time / 1460);
-
-		//camerapos
-		Vector3 cameraPos = -Vector3.Forward * zoom;// + Vector3.Up * 5 + Vector3.Right * 5;
-		cameraPos = Vector3.Transform(cameraPos, Quaternion.CreateFromYawPitchRoll(yaw, pitch, 0));
-
 		//View matrix
-		Matrix View = Matrix.CreateLookAt(cameraPos, Vector3.Zero, Vector3.Up);
-		if (planet == 1)
-		{
-			cameraPos = Vector3.Transform(cameraPos, Matrix.CreateTranslation(Matrix.Invert(sunPos).Translation));
-			View = Matrix.CreateLookAt(cameraPos, Matrix.Invert(sunPos).Translation, Vector3.Up);
-		}
-		else if (planet == 2)
-		{
-			cameraPos = Vector3.Transform(cameraPos, Matrix.CreateTranslation(Matrix.Invert(earthPos).Translation));
-			View = Matrix.CreateLookAt(cameraPos, Matrix.Invert(earthPos).Translation, Vector3.Up);
-		}
-		else if (planet == 3)
-		{
-			cameraPos = Vector3.Transform(cameraPos, Matrix.CreateTranslation(Matrix.Invert(moonPos).Translation));
-			View = Matrix.CreateLookAt(cameraPos, Matrix.Invert(moonPos).Translation, Vector3.Up);
-		}
-
+		Matrix View = Matrix.CreateLookAt(cameraPos, cameraPos + Vector3.Transform(Vector3.Forward, cameraRotation), Vector3.Transform(Vector3.Up, cameraRotation));
 		//Projection matrix
 		Matrix Projection = Matrix.CreatePerspectiveFieldOfView((MathF.PI / 180f) * 40f, device.Viewport.AspectRatio, 0.1f, 1000f);
 
+		//Planet locations
+		sunPos = Matrix.CreateScale(0.1f) * Matrix.CreateRotationZ(-time / 100 /* 25*4 */) * World;
+		earthPos = Matrix.CreateRotationZ(time / 4) * Matrix.CreateTranslation(Vector3.Down * 40) * Matrix.CreateScale(0.01f) * Matrix.CreateRotationZ(time / 1460 /* 365*4 */) * Matrix.CreateRotationY(MathF.PI / 180 * .23f) * World;
+		moonPos = Matrix.CreateScale(0.33f) * Matrix.CreateTranslation(Vector3.Down * 10) * Matrix.CreateRotationZ(time / 4 - time * .03333333f) * Matrix.CreateTranslation(Vector3.Down * 40) * Matrix.CreateScale(0.01f) * Matrix.CreateRotationZ(time / 1460) * World;
+		
 		myEffect.Parameters["World"].SetValue(World);
 		myEffect.Parameters["View"].SetValue(View);
 		myEffect.Parameters["Projection"].SetValue(Projection);
@@ -193,7 +153,7 @@ class LiveLesson3 : Lesson
 
 		myEffect.Parameters["Time"].SetValue(time);
 
-		//myEffect.Parameters["SkyTex"].SetValue(sky);
+		myEffect.Parameters["SkyTex"].SetValue(sky);
 
 		myEffect.Parameters["cameraPosition"].SetValue(cameraPos);
 		myEffect.Parameters["lightPosition"].SetValue(lightPosition);
@@ -202,25 +162,25 @@ class LiveLesson3 : Lesson
 
 		device.Clear(Color.Black);
 
-		//Sun
-		myEffect.CurrentTechnique = myEffect.Techniques["Sun"];
-		RenderModel(sphere, sunPos * World);
-
-		//Earth
-		myEffect.CurrentTechnique = myEffect.Techniques["Earth"];
-		RenderModel(sphere, earthPos * World);
-
-		//Moon
-		myEffect.CurrentTechnique = myEffect.Techniques["Moon"];
-		RenderModel(sphere, moonPos * World);
-
 		//Skybox
 		myEffect.CurrentTechnique = myEffect.Techniques["Sky"];
 		device.DepthStencilState = DepthStencilState.None;
 		device.RasterizerState = RasterizerState.CullNone;
-		RenderModel(cube, Matrix.CreateTranslation(cameraPos) * Matrix.CreateScale(20000));
+		RenderModel(cube, Matrix.CreateTranslation(cameraPos));
 		device.RasterizerState = RasterizerState.CullCounterClockwise;
 		device.DepthStencilState = DepthStencilState.Default;
+
+		//Sun
+		myEffect.CurrentTechnique = myEffect.Techniques["Sun"];
+		RenderModel(sphere, sunPos);
+
+		//Earth
+		myEffect.CurrentTechnique = myEffect.Techniques["Earth"];
+		RenderModel(sphere, earthPos);
+
+		//Moon
+		myEffect.CurrentTechnique = myEffect.Techniques["Moon"];
+		RenderModel(sphere, moonPos );
 	}
 
 	void RenderModel(Model m, Matrix parentMatrix )

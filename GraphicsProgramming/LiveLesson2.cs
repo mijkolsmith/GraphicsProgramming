@@ -112,24 +112,25 @@ class LiveLesson2 : Lesson
 		};
 
 	private Effect myEffect;
-	private Texture2D crateTexture, crateNormal;
+	private Texture2D crateTexture, crateNormal, crateSpecular;
 	Vector3 lightPosition = Vector3.Right * 2 + Vector3.Up * 2 + Vector3.Backward * 2;
 
 	public override void LoadContent(ContentManager Content, GraphicsDeviceManager graphics, SpriteBatch spriteBatch)
 	{
 		myEffect = Content.Load<Effect>(ToString());
-		crateTexture = Content.Load<Texture2D>("avatars-000012910459-m8gz6m-t500x500");
-		crateNormal = Content.Load<Texture2D>("normaltim2");
+		crateTexture = Content.Load<Texture2D>("crate");
+		crateNormal = Content.Load<Texture2D>("NormalMapCrate");
+		crateSpecular = Content.Load<Texture2D>("specular");
 	}
 
 	public override void Draw(GameTime gameTime, GraphicsDeviceManager graphics, SpriteBatch spriteBatch)
 	{
 		GraphicsDevice device = graphics.GraphicsDevice;
 
+		Vector3 cameraPos = -Vector3.Forward * 5 + Vector3.Up * 5 + Vector3.Right * 5;
+
 		float time = (float)gameTime.TotalGameTime.TotalSeconds;
 		lightPosition = new Vector3(MathF.Cos(time) * 2, 1.5f, MathF.Sin(time) * 2);
-
-		Vector3 cameraPos = -Vector3.Forward * 5 + Vector3.Up * 5 + Vector3.Right * 5;
 
 		Matrix World = Matrix.CreateWorld(Vector3.Zero, Vector3.Forward, Vector3.Up);
 		//Matrix World = Matrix.Identity * Matrix.CreateRotationY((float)gameTime.TotalGameTime.TotalSeconds * 1f) * Matrix.CreateRotationX((float)gameTime.TotalGameTime.TotalSeconds / 2f);
@@ -144,6 +145,7 @@ class LiveLesson2 : Lesson
 
 		myEffect.Parameters["MainTex"].SetValue(crateTexture);
 		myEffect.Parameters["NormalTex"].SetValue(crateNormal);
+		myEffect.Parameters["SpecularTex"].SetValue(crateSpecular);
 
 		myEffect.Parameters["cameraPosition"].SetValue(cameraPos);
 		myEffect.Parameters["lightPosition"].SetValue(lightPosition);

@@ -14,7 +14,8 @@ public class Game1 : Game
 		Content.RootDirectory = "Content";
 		IsMouseVisible = true;
 
-		currentLesson = new LiveLesson4();
+		//Input the lesson you want to view here:
+		currentLesson = new LiveLesson1();
 	}
 
 	protected override void Initialize()

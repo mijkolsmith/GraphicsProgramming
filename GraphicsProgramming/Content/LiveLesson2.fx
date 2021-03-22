@@ -30,6 +30,15 @@ sampler2D NormalTextureSampler = sampler_state
     MagFilter = ANISOTROPIC;
 };
 
+Texture2D SpecularTex;
+sampler2D SpecularTextureSampler = sampler_state
+{
+    Texture = <SpecularTex>;
+    MipFilter = POINT;
+    MinFilter = ANISOTROPIC;
+    MagFilter = ANISOTROPIC;
+};
+
 // Getting out vertex data from vertex shader to pixel shader
 struct VertexShaderOutput {
     float4 position     : SV_POSITION;
@@ -40,7 +49,7 @@ struct VertexShaderOutput {
 };
 
 // Vertex shader, receives values directly from semantic channels
-VertexShaderOutput MainVS(float4 position : POSITION, float4 color : COLOR0, float2 uv : TEXCOORD, float3 normal : NORMAL ) 
+VertexShaderOutput MainVS(float4 position : POSITION, float4 color : COLOR0, float2 uv : TEXCOORD, float3 normal : NORMAL , float3 tangent : TANGENT, float3 binormal : BINORMAL) 
 { 
     VertexShaderOutput output = (VertexShaderOutput)0;
 
@@ -49,7 +58,7 @@ VertexShaderOutput MainVS(float4 position : POSITION, float4 color : COLOR0, flo
     output.color = color;
     output.uv = uv;
     output.worldNormal = mul(normal, World).xyz;
-    
+
     return output;
 }
 
@@ -58,6 +67,7 @@ float4 MainPS(VertexShaderOutput input) : COLOR
 {
     float4 texColor = tex2D(MainTextureSampler, input.uv);
     float4 normalColor = tex2D(NormalTextureSampler, input.uv);
+    float4 specularColor = tex2D(SpecularTextureSampler, input.uv);
 
     float3 perturbedNormal = input.worldNormal;
     perturbedNormal.rg += (normalColor.rg * 2 - 1);
@@ -68,11 +78,11 @@ float4 MainPS(VertexShaderOutput input) : COLOR
 
     float3 refl = normalize(-reflect(lightDirection, perturbedNormal));
 
-    float spec = pow(max(dot(refl, normalize(viewDirection)), 0.0), 4);
+    float spec = pow(max(dot(refl, normalize(viewDirection)), 0.0), 4) * specularColor;
 
     float light = max(dot(perturbedNormal, -lightDirection), 0.0);
 
-    return float4((max(light, 0.05f) + spec) * texColor.rgb, 1);
+    return float4 ((max(light, 0.05f) + spec) * texColor.rgb, 1);
 }
 
 technique
